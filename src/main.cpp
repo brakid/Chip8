@@ -13,7 +13,7 @@
 using namespace std;
 
 void sleep(uint64_t milliseconds) {
-    this_thread::sleep_for(chrono::milliseconds(200));
+    this_thread::sleep_for(chrono::milliseconds(milliseconds));
 };
 
 uint8_t memoryData[DATA_LENGTH];
@@ -59,6 +59,7 @@ int main(int argc, char *argv[]) {
     do {
         wasSuccessful = chip8Cpu->runCycle();
         cout << "Emulating cycle: " << (wasSuccessful ? "success" : "failed") << endl;
+        display->draw();
         keyboard->readKey();
         sleep(15); // ~60Hz
     } while (wasSuccessful);
