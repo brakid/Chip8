@@ -4,10 +4,11 @@
 
 class Keyboard {
 private:
+    bool isBlocking;
     bool volatile keyPressed;
     uint8_t volatile keyValue;
 public:
-    Keyboard();
+    Keyboard(bool isBlocking);
 
     bool isKeyPressed();
     uint8_t getKeyValue();

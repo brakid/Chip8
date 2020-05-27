@@ -1,9 +1,10 @@
 import re
 
-ADDRESS = '(0x[0-9A-F]{3})'
-REGISTER = 'V([0-9A-F])'
-BYTE = '(0x[0-9A-F]{1,2})'
-NIBBLE = '(0x[0-9A-F])'
+NIBBLE = '(0x[0-9A-Fa-f])'
+BYTE = '(0x[0-9A-Fa-f]{1,2})'
+ADDRESS = '(0x[0-9A-Fa-f]{3})'
+WORD = '(0x[0-9A-Fa-f]{1,4})'
+REGISTER = 'V([0-9A-Fa-f])'
 
 system_call_pattern = re.compile('SYS {}'.format(ADDRESS))
 clear_screen_pattern = re.compile('CLS')
@@ -41,6 +42,10 @@ load_bcd_register_pattern = re.compile('LD B, {}'.format(REGISTER))
 load_i_register_register_pattern = re.compile('LD \[I\], {}'.format(REGISTER))
 load_register_i_register_pattern = re.compile('LD {}, \[I\]'.format(REGISTER))
 
+# additional commands to allow writing data:
+byte_data_pattern = re.compile('.byte {}'.format(BYTE))
+word_data_pattern = re.compile('.word {}'.format(WORD))
+
 def extract_variables(regex, string):
     match = regex.match(string)
     if match:
@@ -65,6 +70,12 @@ def parse_byte(byte):
 def parse_nibble(nibble):
     nibble = int(nibble, 16)
     return nibble & 0xF
+
+def parse_word(word):
+    word = int(word, 16)
+    low_byte = word & 0xFF
+    high_byte = (word >> 8) & 0xFF
+    return [high_byte, low_byte]
     
 def parse_command(command):
     (match, variables) = extract_variables(system_call_pattern, command)
@@ -72,11 +83,11 @@ def parse_command(command):
         [high_nibble, low_byte] = parse_address(variables[0])
         return [0x00 | high_nibble, low_byte]
     
-    (match, variables) = extract_variables(clear_screen_pattern, command)
+    (match, _) = extract_variables(clear_screen_pattern, command)
     if (match):
         return [0x00, 0xE0]
     
-    (match, variables) = extract_variables(return_pattern, command)
+    (match, _) = extract_variables(return_pattern, command)
     if (match):
         return [0x00, 0xEE]
     
@@ -197,8 +208,8 @@ def parse_command(command):
     (match, variables) = extract_variables(display_register_register_nibble, command)
     if match and len(variables) == 3:
         register1 = parse_register(variables[0])
-        register2 = parse_register(variables[2])
-        nibble = parse_nibble(variables[3])
+        register2 = parse_register(variables[1])
+        nibble = parse_nibble(variables[2])
         return [0xD0 | register1, register2 << 4 | nibble]
     
     (match, variables) = extract_variables(skip_key_pressed_register_pattern, command)
@@ -255,6 +266,17 @@ def parse_command(command):
     if match and len(variables) == 1:
         register = parse_register(variables[0])
         return [0xF0 | register, 0x65]
+    
+    # handling byte and word data
+    (match, variables) = extract_variables(byte_data_pattern, command)
+    if match and len(variables) == 1:
+        byte = parse_byte(variables[0])
+        return [byte]
+
+    (match, variables) = extract_variables(word_data_pattern, command)
+    if match and len(variables) == 1:
+        [high_byte, low_byte] = parse_word(variables[0])
+        return [high_byte, low_byte]
     
     return ['Failure', command]
 

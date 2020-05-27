@@ -56,6 +56,13 @@ Chip8CPU::~Chip8CPU() {
     delete stack;
 }
 
+void Chip8CPU::loadMemory(uint8_t* memoryData, uint16_t memoryDataLength) {
+    for (uint16_t offset = 0; offset <= memoryDataLength; offset++) {
+        uint8_t data = *(memoryData + offset);
+        memory[PROGRAM_START_ADDRESS + offset] = data;
+    }
+}
+
 bool Chip8CPU::runCycle() {
     uint16_t opcode = memory[programmCounter] << 8 | memory[programmCounter+1];
 
@@ -127,7 +134,7 @@ bool Chip8CPU::runCycle() {
             uint8_t registerIndex = opcodeNibbels[1];
             uint8_t constant = getValue(opcodeNibbels[2], opcodeNibbels[3]);
             
-            cout << "Comparing: V[" << hex << (int)registerIndex << "]=" << hex << (int)V[registerIndex] << " == " << hex << constant << endl;
+            cout << "Comparing: V[" << hex << (int)registerIndex << "]=" << hex << (int)V[registerIndex] << " == " << hex << (int)constant << endl;
             
             if (V[registerIndex] == constant) {
                 increaseProgramCounter(programmCounter); // skip next command
@@ -138,7 +145,7 @@ bool Chip8CPU::runCycle() {
             uint8_t registerIndex = opcodeNibbels[1];
             uint8_t constant = getValue(opcodeNibbels[2], opcodeNibbels[3]);
             
-            cout << "Comparing: V[" << hex << (int)registerIndex << "]=" << hex << (int)V[registerIndex] << " != " << hex << constant << endl;
+            cout << "Comparing: V[" << hex << (int)registerIndex << "]=" << hex << (int)V[registerIndex] << " != " << hex << (int)constant << endl;
             
             if (V[registerIndex] != constant) {
                 increaseProgramCounter(programmCounter); // skip next command
@@ -432,8 +439,13 @@ bool Chip8CPU::runCycle() {
     }
     increaseProgramCounter(programmCounter);
 
-    delayTimer--;
-    soundTimer--;
+    if (soundTimer > 0) {
+        cout << "\a";
+    }
+
+    decreaseTimer(delayTimer);
+    decreaseTimer(soundTimer);
+
 
     return !unknownOpcode;
 }
@@ -454,9 +466,8 @@ void increaseProgramCounter(uint16_t& programCounter) {
     programCounter = programCounter + INCREASE;
 }
 
-void Chip8CPU::loadMemory(uint8_t* memoryData, uint16_t memoryDataLength) {
-    for (uint16_t offset = 0; offset <= memoryDataLength; offset++) {
-        uint8_t data = *(memoryData + offset);
-        memory[PROGRAM_START_ADDRESS + offset] = data;
+void decreaseTimer(uint8_t& timer) {
+    if (timer > 0) {
+        timer--;
     }
 }

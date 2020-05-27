@@ -49,7 +49,7 @@ bool Display::drawSpriteBit(uint8_t columnIndex, uint8_t rowIndex, bool spriteBi
 bool Display::drawSpriteByte(uint8_t columnIndex, uint8_t rowIndex, uint8_t sprite) {
     bool collision = false;
     for (uint8_t offset = 0; offset < 8; offset++) {
-        collision |= drawSpriteBit((columnIndex + offset) % DISPLAY_WIDTH, rowIndex, getBitFromByte(sprite, 8 - offset));
+        collision |= drawSpriteBit((columnIndex + offset) % DISPLAY_WIDTH, rowIndex, getBitFromByte(sprite, 7 - offset));
     }
 
     return collision;

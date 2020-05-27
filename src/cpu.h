@@ -46,5 +46,6 @@ void handleUnsupportedOpcode(uint16_t opcode);
 uint16_t extractAddressFromOpcode(uint16_t opcode); // takes 0x0FFF
 uint8_t getValue(uint8_t highNibble, uint8_t lowNibble);;
 void increaseProgramCounter(uint16_t& programCounter);
+void decreaseTimer(uint8_t& timer);
 
 #endif

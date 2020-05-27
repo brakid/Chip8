@@ -3,11 +3,17 @@ import re
 def is_label(line):
     return line.startswith(':')
 
+def is_byte(line):
+    return '.byte' in line
+
 def count_commands(label, classified_lines):
     counter = 0
     for (line, islabel) in classified_lines:
         if not islabel:
-            counter = counter + 1
+            if is_byte(line):
+                counter = counter + 1
+            else:
+                counter = counter + 2
         elif islabel and get_label(line) == label:
             return counter
         
@@ -38,7 +44,7 @@ def replace_labels_from_code(start_address, code):
     for label in labels:
         label_value = get_label(label)
         counter = count_commands(label_value, classified_lines)
-        labels_to_addresses[label_value] = start_address + 2 * counter
+        labels_to_addresses[label_value] = start_address + counter
 
     return [replace_labels(command, labels_to_addresses) for command in commands]
 

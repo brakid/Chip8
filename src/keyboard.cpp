@@ -4,7 +4,8 @@
 
 using namespace std;
 
-Keyboard::Keyboard() {
+Keyboard::Keyboard(bool isBlocking) {
+    this->isBlocking = isBlocking;
     keyPressed = false;
     keyValue = 0x00;
 }
@@ -70,6 +71,10 @@ uint8_t getValue(char character) {
 }
 
 void Keyboard::readKey() {
+    if (!isBlocking) {
+        return; // do not check for keyboard input
+    }
+
     char character = 0;
     while(!validateCharacter(character)) {
         cout << "Press key: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, a, b, c, d, e, f, no key = enter" << endl;
