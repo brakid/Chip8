@@ -21,4 +21,6 @@ Ncurses usage explanation: http://www.cs.ukzn.ac.za/~hughm/os/notes/ncurses.html
 #### Usage:
 Build the interpreter via ```make```
 
-Example usage: ```./chip8cpu.out abc_display.out 50```
+Example usage: 
+* ```./chip8cpu.out abc_display.out 50``` to set the delay between the cycles to 50ms.
+* ```./chip8cpu.out abc_display.out debug``` to use the debug mode, expect a key inout between each cycle.

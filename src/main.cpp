@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     srand(time(NULL));
 
     if (argc < 2) {
-        cout << "Expecting binary file name to load, optional: delay between cycles (default 15ms)" << endl;
+        cout << "Expecting binary file name to load, optional: delay between cycles (default 15ms) or debug for step by step debug mode" << endl;
         return 0;
     }
 
@@ -37,13 +37,19 @@ int main(int argc, char *argv[]) {
     }
 
     uint64_t delay = 15; // 15ms delay ~60Hz
+    bool norelayFlag = TRUE;
 
     if (argc == 3) {
-        uint64_t value = atoi(argv[2]);
-        if (value > 0) {
-            delay = value;
+        string isDebugMode(argv[2]);
+        if (isDebugMode == "debug") {
+            norelayFlag = FALSE;
         } else {
-            cout << "Ignoring passed delay : " << value << endl;
+            uint64_t value = atoi(argv[2]);
+            if (value > 0) {
+                delay = value;
+            } else {
+                cout << "Ignoring passed delay : " << value << endl;
+            }
         }
     }
     cout << "Using delay: " << (int)delay << " ms" << endl;
@@ -58,7 +64,7 @@ int main(int argc, char *argv[]) {
     
     // keyboardWindow is the only window with inputs
     keypad(keyboardWindow, TRUE);
-    nodelay(keyboardWindow, TRUE);
+    nodelay(keyboardWindow, norelayFlag);
     
     scrollok(displayWindow, TRUE);
     scrollok(keyboardWindow, TRUE);

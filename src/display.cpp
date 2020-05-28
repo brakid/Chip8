@@ -57,10 +57,12 @@ bool getBitFromByte(uint8_t byte, uint8_t position) {
 }
 
 bool Display::drawSpriteBit(uint8_t columnIndex, uint8_t rowIndex, bool spriteBit) {
+    bool deletePixel = display[rowIndex][columnIndex] == 0x01 && spriteBit == true;
+    
     uint8_t xorResult = (display[rowIndex][columnIndex] ^ spriteBit) & 0x01;
     display[rowIndex][columnIndex] = xorResult;
 
-    return xorResult == 0x00 ? true : false;
+    return deletePixel;
 }
 
 bool Display::drawSpriteByte(uint8_t columnIndex, uint8_t rowIndex, uint8_t sprite) {
