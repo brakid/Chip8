@@ -4,8 +4,9 @@
 
 using namespace std;
 
-Keyboard::Keyboard(bool isBlocking) {
-    this->isBlocking = isBlocking;
+Keyboard::Keyboard(WINDOW* window) {
+    this->window = window;
+    
     keyPressed = false;
     keyValue = 0x00;
 }
@@ -36,14 +37,14 @@ bool validateCharacter(char character) {
         case 'd':
         case 'e':
         case 'f':
-        case '\n':
+        case ERR:
             return true;
     }
     return false;
 }
 
-bool isKeyEnter(char character) {
-    return character == '\n';
+bool isERR(char character) {
+    return character == ERR;
 }
 
 uint8_t getValue(char character) {
@@ -71,21 +72,24 @@ uint8_t getValue(char character) {
 }
 
 void Keyboard::readKey() {
-    if (!isBlocking) {
-        return; // do not check for keyboard input
-    }
-
+    wclear(window); 
+    wmove(window, 0, 0);
+    wrefresh(window);
+    wprintw(window, "Press key: [0-9a-f]");
+    wechochar(window, '\n');
     char character = 0;
     while(!validateCharacter(character)) {
-        cout << "Press key: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, a, b, c, d, e, f, no key = enter" << endl;
-        character = getchar();
+        character = wgetch(window);
     }
 
-    bool keyIsPressed = !isKeyEnter(character);
+    bool keyIsPressed = !isERR(character); // ERR = no key pressed
 
     if (keyIsPressed) {
         keyPressed = keyIsPressed;
         keyValue = getValue(character);
+        wprintw(window, "Pressed key: ");
+        waddch(window, character);
+        wechochar(window, '\n');
     } else {
         keyPressed = false;
     }

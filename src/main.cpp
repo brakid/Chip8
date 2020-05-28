@@ -1,7 +1,8 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
-#include <time.h> 
+#include <time.h>
+#include <ncurses.h>
 #include "cpu.h"
 #include "display.h"
 #include "keyboard.h"
@@ -22,21 +23,11 @@ int main(int argc, char *argv[]) {
     srand(time(NULL));
 
     if (argc < 2) {
-        cout << "Expecting binary file name to load, optional: blocking/ nonblocking" << endl;
+        cout << "Expecting binary file name to load, optional: delay between cycles (default 15ms)" << endl;
         return 0;
     }
 
     string fileName(argv[1]);
-
-    bool isBlocking = true;
-    if (argc == 3) {
-        string blockingArgument(argv[2]);
-        if (blockingArgument == "nonblocking") {
-            isBlocking = false;
-        }
-    }
-
-    cout << "Is blocking for keyboard input: " << (isBlocking ? "yes" : "no") << endl;
 
     bool success = loadFileContent(fileName, memoryData, DATA_LENGTH);
 
@@ -45,11 +36,43 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    Display* display = new Display();
-    Keyboard* keyboard = new Keyboard(isBlocking);
-    Chip8CPU* chip8Cpu = new Chip8CPU(display, keyboard);
+    uint64_t delay = 15; // 15ms delay ~60Hz
+
+    if (argc == 3) {
+        uint64_t value = atoi(argv[2]);
+        if (value > 0) {
+            delay = value;
+        } else {
+            cout << "Ignoring passed delay : " << value << endl;
+        }
+    }
+    cout << "Using delay: " << (int)delay << " ms" << endl;
+
+    initscr();
+    noecho();
+    cbreak();
+
+    WINDOW* displayWindow = newwin(DISPLAY_HEIGHT + 5, DISPLAY_WIDTH + 5, 1, 0);
+    WINDOW* keyboardWindow = newwin(5, 40, 1, DISPLAY_WIDTH +  10);
+    WINDOW* cpuWindow = newwin(DISPLAY_HEIGHT - 5, 80, 10, DISPLAY_WIDTH +  10);
     
-    cout << "Starting Chip8 Emulator" << endl;
+    // keyboardWindow is the only window with inputs
+    keypad(keyboardWindow, TRUE);
+    nodelay(keyboardWindow, TRUE);
+    
+    scrollok(displayWindow, TRUE);
+    scrollok(keyboardWindow, TRUE);
+    scrollok(cpuWindow, TRUE);
+
+    Display* display = new Display(displayWindow);
+    Keyboard* keyboard = new Keyboard(keyboardWindow);
+    Chip8CPU* chip8Cpu = new Chip8CPU(cpuWindow, display, keyboard);
+    
+    wclear(cpuWindow); 
+    wmove(cpuWindow, 1, 0);
+    wrefresh(cpuWindow);
+    wprintw(cpuWindow, "Starting Chip8 Emulator");
+    wechochar(cpuWindow, '\n');
 
     chip8Cpu->loadMemory(memoryData, LENGTH(memoryData));
 
@@ -58,14 +81,23 @@ int main(int argc, char *argv[]) {
     bool wasSuccessful = false;
     do {
         wasSuccessful = chip8Cpu->runCycle();
-        cout << "Emulating cycle: " << (wasSuccessful ? "success" : "failed") << endl;
+        wprintw(cpuWindow, "Emulating cycle: ");
+        wprintw(cpuWindow, (wasSuccessful ? "success" : "failed"));
+        wechochar(cpuWindow, '\n');
         display->draw();
         keyboard->readKey();
-        sleep(15); // ~60Hz
+        sleep(delay); // ~60Hz
     } while (wasSuccessful);
-    cout << "Emulation ended" << endl;
+    
+    wprintw(cpuWindow, "Emulation ended. Press key to exit.");
+    wechochar(cpuWindow, '\n');
 
-    display->draw();
+    wgetch(cpuWindow);
+    
+    delwin(cpuWindow);
+    delwin(displayWindow);
+    delwin(keyboardWindow);
+    endwin();
     
     delete chip8Cpu;
     delete display;

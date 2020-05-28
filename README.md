@@ -14,12 +14,11 @@ Supports labels to code addresses for jumps and for data access.
 Example usage: ```./assembler.py abc_display.s abc_display.out```
 
 ### Interpreter (written in C++)
-Reads a binary in the memory and executes it.
-Current limitations:
-* at each cycle, a key press is required - even when no keyboard input is expected - TODO: non-blocking keyboard reads, currently solved by adding a command line argument
-* printing the screen is not happening all the time
+Reads a binary in the memory and executes it. Uses ```ncurses```library https://en.wikipedia.org/wiki/Ncurses for display management and non-blocking keyboard inputs.
+
+Ncurses usage explanation: http://www.cs.ukzn.ac.za/~hughm/os/notes/ncurses.html
 
 #### Usage:
 Build the interpreter via ```make```
 
-Example usage: ```./chip8cpu.out abc_display.out nonblocking```
+Example usage: ```./chip8cpu.out abc_display.out 50```

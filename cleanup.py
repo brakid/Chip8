@@ -18,7 +18,7 @@ def count_commands(label, classified_lines):
             return counter
         
 def get_label(value):
-    return value[1:]
+    return value[1:].strip()
 
 def get_command(value):
     return value.strip()

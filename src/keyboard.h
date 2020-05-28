@@ -2,13 +2,15 @@
 #ifndef KEYBOARD
 #define KEYBOARD
 
+#include <ncurses.h>
+
 class Keyboard {
 private:
-    bool isBlocking;
+    WINDOW* window;
     bool volatile keyPressed;
     uint8_t volatile keyValue;
 public:
-    Keyboard(bool isBlocking);
+    Keyboard(WINDOW* window);
 
     bool isKeyPressed();
     uint8_t getKeyValue();

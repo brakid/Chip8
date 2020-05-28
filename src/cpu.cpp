@@ -46,7 +46,8 @@ void Chip8CPU::init() {
     display->clean();
 }
 
-Chip8CPU::Chip8CPU(Display* display, Keyboard* keyboard) {
+Chip8CPU::Chip8CPU(WINDOW* window, Display* display, Keyboard* keyboard) {
+    this->window = window;
     this->display = display;
     this->keyboard = keyboard;
     init();
@@ -66,8 +67,8 @@ void Chip8CPU::loadMemory(uint8_t* memoryData, uint16_t memoryDataLength) {
 bool Chip8CPU::runCycle() {
     uint16_t opcode = memory[programmCounter] << 8 | memory[programmCounter+1];
 
-    cout << "Program Counter: " << hex << (int)programmCounter << ", Opcode: " << hex << (int)opcode << endl;
-
+    wprintw(window, "Program Counter: 0x%04x, Opcode: 0x%04x\n", programmCounter, opcode);
+    
     bool unknownOpcode = false;
     
     uint8_t opcodeNibbels[4];
@@ -83,17 +84,20 @@ bool Chip8CPU::runCycle() {
                     switch(opcodeNibbels[3]) {
                         case 0x0: {
                             display->clean();
-                            cout << "Clean display" << endl;
+                            
+                            wprintw(window, "Clean display\n");
                             break;
                         }
                         case 0xE: {
                             uint16_t returnAddress = stack->top();
-                            cout << "Return back to: " << hex << (int)returnAddress << endl;
+                            
+                            wprintw(window, "Return back to: 0x%03x\n", returnAddress);
+                            
                             programmCounter = returnAddress;
                             break;
                         }
                         default: {
-                            handleUnsupportedOpcode(opcode);
+                            handleUnsupportedOpcode(window, opcode);
                             unknownOpcode = true;
                             break;
                         }
@@ -101,14 +105,14 @@ bool Chip8CPU::runCycle() {
                     break;
                 }
                 default: { // opcode is 0x0NNN
-                    handleUnsupportedOpcode(opcode);
+                    handleUnsupportedOpcode(window, opcode);
                     unknownOpcode = true;
                     break;
                     /*
                     uint16_t returnAddress = programmCounter;
                     stack->push(returnAddress);
                     uint16_t callAddress = extractAddressFromOpcode(opcode);
-                    cout << "Calling program at: " << hex << (int)callAddress << ", return address: " << hex << (int)returnAddress << endl;
+                    //cout << "Calling program at: " << hex << (int)callAddress << ", return address: " << hex << (int)returnAddress << endl;
                     programmCounter = callAddress - INCREASE;
                     break;
                     */
@@ -118,7 +122,9 @@ bool Chip8CPU::runCycle() {
         }
         case 0x1: {
             uint16_t jumpAddress = extractAddressFromOpcode(opcode);
-            cout << "Jump to: " << hex << (int)jumpAddress << endl;
+            
+            wprintw(window, "Jump to: 0x%03x\n", jumpAddress);
+            
             programmCounter = jumpAddress - INCREASE; // as the counter is increased after each cycle
             break;
         }
@@ -126,7 +132,9 @@ bool Chip8CPU::runCycle() {
             uint16_t returnAddress = programmCounter;
             stack->push(returnAddress);
             uint16_t subroutineAddress = extractAddressFromOpcode(opcode);
-            cout << "Calling subroutine at: " << hex << (int)subroutineAddress << ", return address: " << hex << (int)returnAddress << endl;
+            
+            wprintw(window, "Calling subroutine at: 0x%04x, return address: 0x%04x\n", subroutineAddress, returnAddress);
+            
             programmCounter = subroutineAddress - INCREASE; // as the counter is increased after each cycle
             break;
         }
@@ -134,7 +142,7 @@ bool Chip8CPU::runCycle() {
             uint8_t registerIndex = opcodeNibbels[1];
             uint8_t constant = getValue(opcodeNibbels[2], opcodeNibbels[3]);
             
-            cout << "Comparing: V[" << hex << (int)registerIndex << "]=" << hex << (int)V[registerIndex] << " == " << hex << (int)constant << endl;
+            wprintw(window, "Comparing: V[0x%01x]=0x%02x == 0x%02x\n", registerIndex, V[registerIndex], constant);
             
             if (V[registerIndex] == constant) {
                 increaseProgramCounter(programmCounter); // skip next command
@@ -145,7 +153,7 @@ bool Chip8CPU::runCycle() {
             uint8_t registerIndex = opcodeNibbels[1];
             uint8_t constant = getValue(opcodeNibbels[2], opcodeNibbels[3]);
             
-            cout << "Comparing: V[" << hex << (int)registerIndex << "]=" << hex << (int)V[registerIndex] << " != " << hex << (int)constant << endl;
+            wprintw(window, "Comparing: V[0x%01x]=0x%02x != 0x%02x\n", registerIndex, V[registerIndex], constant);
             
             if (V[registerIndex] != constant) {
                 increaseProgramCounter(programmCounter); // skip next command
@@ -156,7 +164,7 @@ bool Chip8CPU::runCycle() {
             uint8_t firstRegisterIndex = opcodeNibbels[1];
             uint8_t secondRegisterIndex = opcodeNibbels[2];
             
-            cout << "Comparing: V[" << hex << (int)firstRegisterIndex << "]=" << hex << (int)V[firstRegisterIndex] << " == V[" << hex << (int)secondRegisterIndex << "]=" << hex << (int)V[secondRegisterIndex] << endl;
+            wprintw(window, "Comparing: V[0x%01x]=0x%02x == V[0x%01x]=0x%02x\n", firstRegisterIndex, V[firstRegisterIndex], secondRegisterIndex, V[secondRegisterIndex]);
             
             if (V[firstRegisterIndex] == V[secondRegisterIndex]) {
                 increaseProgramCounter(programmCounter); // skip next command
@@ -167,7 +175,8 @@ bool Chip8CPU::runCycle() {
             uint8_t registerIndex = opcodeNibbels[1];
             uint8_t constant = getValue(opcodeNibbels[2], opcodeNibbels[3]);
             
-            cout << "Set: V[" << hex << (int)registerIndex << "]=" << hex << (int)V[registerIndex] << " to " << hex << (int)constant << endl;
+            wprintw(window, "Set: V[0x%01x]=0x%02x = 0x%02x\n", registerIndex, V[registerIndex], constant);
+            
             V[registerIndex] = constant;
 
             break;
@@ -176,7 +185,8 @@ bool Chip8CPU::runCycle() {
             uint8_t registerIndex = opcodeNibbels[1];
             uint8_t constant = getValue(opcodeNibbels[2], opcodeNibbels[3]);
             
-            cout << "Add: V[" << hex << (int)registerIndex << "]=" << hex << (int)V[registerIndex] << " + " << hex << (int)constant << endl;
+            wprintw(window, "Add: V[0x%01x]=0x%02x = 0x%02x\n", registerIndex, V[registerIndex], constant);
+            
             V[registerIndex]+= constant;
             
             break;
@@ -187,31 +197,31 @@ bool Chip8CPU::runCycle() {
 
             switch(opcodeNibbels[3]) {
                 case 0x0: {
-                    cout << "Set: V[" << hex << (int)firstRegisterIndex << "]=" << hex << (int)V[firstRegisterIndex] << " to V[" << hex << (int)secondRegisterIndex << "]=" << hex << (int)V[secondRegisterIndex] << endl;
+                    wprintw(window, "Set: V[0x%01x]=0x%02x = V[0x%01x]=0x%02x\n", firstRegisterIndex, V[firstRegisterIndex], secondRegisterIndex, V[secondRegisterIndex]);
                     
                     V[firstRegisterIndex] = V[secondRegisterIndex];
                     break;
                 }
                 case 0x1: {
-                    cout << "Set: V[" << hex << (int)firstRegisterIndex << "]=" << hex << (int)V[firstRegisterIndex] << " to V[" << hex << (int)firstRegisterIndex << "]=" << hex << (int)V[firstRegisterIndex] << " | V[" << hex << (int)secondRegisterIndex << "]=" << hex << (int)V[secondRegisterIndex] << endl;
+                    wprintw(window, "Set: V[0x%01x]=0x%02x != V[0x%01x]=0x%02x\n", firstRegisterIndex, V[firstRegisterIndex], secondRegisterIndex, V[secondRegisterIndex]);
                     
                     V[firstRegisterIndex] |= V[secondRegisterIndex];
                     break;
                 }
                 case 0x2: {
-                    cout << "Set: V[" << hex << (int)firstRegisterIndex << "]=" << hex << (int)V[firstRegisterIndex] << " to V[" << hex << (int)firstRegisterIndex << "]=" << hex << (int)V[firstRegisterIndex] << " & V[" << hex << (int)secondRegisterIndex << "]=" << hex << (int)V[secondRegisterIndex] << endl;
+                    wprintw(window, "Set: V[0x%01x]=0x%02x &= V[0x%01x]=0x%02x\n", firstRegisterIndex, V[firstRegisterIndex], secondRegisterIndex, V[secondRegisterIndex]);
                     
                     V[firstRegisterIndex] &= V[secondRegisterIndex];
                     break;
                 }
                 case 0x3: {
-                    cout << "Set: V[" << hex << (int)firstRegisterIndex << "]=" << hex << (int)V[firstRegisterIndex] << " to V[" << hex << (int)firstRegisterIndex << "]=" << hex << (int)V[firstRegisterIndex] << " ^ V[" << hex << (int)secondRegisterIndex << "]=" << hex << (int)V[secondRegisterIndex] << endl;
+                    wprintw(window, "Set: V[0x%01x]=0x%02x ^= V[0x%01x]=0x%02x\n", firstRegisterIndex, V[firstRegisterIndex], secondRegisterIndex, V[secondRegisterIndex]);
                     
                     V[firstRegisterIndex] ^= V[secondRegisterIndex];
                     break;
                 }
                 case 0x4: {
-                    cout << "Add: V[" << hex << (int)firstRegisterIndex << "]=" << hex << (int)V[firstRegisterIndex] << " + V[" << hex << (int)secondRegisterIndex << "]=" << hex << (int)V[secondRegisterIndex] << endl;
+                    wprintw(window, "Add: V[0x%01x]=0x%02x += V[0x%01x]=0x%02x\n", firstRegisterIndex, V[firstRegisterIndex], secondRegisterIndex, V[secondRegisterIndex]);
                     
                     uint16_t fullResult = V[firstRegisterIndex] + V[secondRegisterIndex];
                     uint8_t carryOverFlag = (fullResult & 0x0100) >> 8;
@@ -222,7 +232,7 @@ bool Chip8CPU::runCycle() {
                     break;
                 }
                 case 0x5: {
-                    cout << "Subtract: V[" << hex << (int)firstRegisterIndex << "]=" << hex << (int)V[firstRegisterIndex] << " - V[" << hex << (int)secondRegisterIndex << "]=" << hex << (int)V[secondRegisterIndex] << endl;
+                    wprintw(window, "Subtract: V[0x%01x]=0x%02x -= V[0x%01x]=0x%02x\n", firstRegisterIndex, V[firstRegisterIndex], secondRegisterIndex, V[secondRegisterIndex]);
                     
                     uint8_t carryOverFlag = (V[firstRegisterIndex] > V[secondRegisterIndex]) ? 0x1 : 0x0;
                     uint8_t result = V[firstRegisterIndex] - V[secondRegisterIndex];
@@ -232,7 +242,7 @@ bool Chip8CPU::runCycle() {
                     break;
                 }
                 case 0x6: {
-                    cout << "Shift: V[" << hex << (int)firstRegisterIndex << "]=" << hex << (int)V[firstRegisterIndex] << " >> 1" << endl;
+                    wprintw(window, "Shift: V[0x%01x]=0x%02x >> 1\n", firstRegisterIndex, V[firstRegisterIndex]);
                     
                     uint8_t carryOverFlag = V[firstRegisterIndex] & 0x01;
                     
@@ -241,7 +251,7 @@ bool Chip8CPU::runCycle() {
                     break;
                 }
                 case 0x7: {
-                    cout << "Set: V[" << hex << (int)firstRegisterIndex << "]=" << hex << (int)V[firstRegisterIndex] << " to V[" << hex << (int)secondRegisterIndex << "]=" << hex << (int)V[secondRegisterIndex] << " - V[" << hex << (int)firstRegisterIndex << "]=" << hex << (int)V[firstRegisterIndex] << endl;
+                    wprintw(window, "Subtract: V[0x%01x] = V[0x%01x]=0x%02x - V[0x%01x]=0x%02x\n", firstRegisterIndex, secondRegisterIndex, V[secondRegisterIndex], firstRegisterIndex, V[firstRegisterIndex]);
                     
                     uint8_t carryOverFlag = (V[secondRegisterIndex] > V[firstRegisterIndex]) ? 0x1 : 0x0;
                     uint8_t result = V[secondRegisterIndex] - V[firstRegisterIndex];
@@ -251,7 +261,7 @@ bool Chip8CPU::runCycle() {
                     break;
                 }
                 case 0xE: {
-                    cout << "Shift: V[" << hex << (int)firstRegisterIndex << "]=" << hex << (int)V[firstRegisterIndex] << " << 1" << endl;
+                    wprintw(window, "Shift: V[0x%01x]=0x%02x << 1\n", firstRegisterIndex, V[firstRegisterIndex]);
                     
                     uint8_t carryOverFlag = V[firstRegisterIndex] & 0x80;
                     V[firstRegisterIndex] <<= 1;
@@ -259,7 +269,7 @@ bool Chip8CPU::runCycle() {
                     break;
                 }
                 default: {
-                    handleUnsupportedOpcode(opcode);
+                    handleUnsupportedOpcode(window, opcode);
                     unknownOpcode = true;
                     break;
                 }
@@ -270,7 +280,7 @@ bool Chip8CPU::runCycle() {
             uint8_t firstRegisterIndex = opcodeNibbels[1];
             uint8_t secondRegisterIndex = opcodeNibbels[2];
             
-            cout << "Comparing: V[" << hex << (int)firstRegisterIndex << "]=" << hex << (int)V[firstRegisterIndex] << " != V[" << hex << (int)secondRegisterIndex << "]=" << hex << (int)V[secondRegisterIndex] << endl;
+            wprintw(window, "Comparing: V[0x%01x]=0x%02x != V[0x%01x]=0x%02x\n", firstRegisterIndex, V[firstRegisterIndex], secondRegisterIndex, V[secondRegisterIndex]);
             
             if (V[firstRegisterIndex] != V[secondRegisterIndex]) {
                 increaseProgramCounter(programmCounter); // skip next command
@@ -280,7 +290,7 @@ bool Chip8CPU::runCycle() {
         case 0xA: {
             uint16_t address = extractAddressFromOpcode(opcode);
             
-            cout << "Set: I to: " << hex << (int)address << endl;
+            wprintw(window, "Set: I=0x%03x to 0x%03x\n", I, address);
             
             I = address;
             break;
@@ -288,7 +298,7 @@ bool Chip8CPU::runCycle() {
         case 0xB: {
             uint16_t jumpAddress = extractAddressFromOpcode(opcode);
             
-            cout << "Jump to: V[0]=" << hex << (int)V[0] << " + " << hex << (int)jumpAddress << endl;
+            wprintw(window, "Jump to: V[0]=0x%02x + 0x%03x\n", V[0], jumpAddress);
             
             programmCounter = V[0] + jumpAddress - INCREASE; // as the counter is increased after each cycle
             break;
@@ -298,7 +308,7 @@ bool Chip8CPU::runCycle() {
             uint8_t constant = getValue(opcodeNibbels[2], opcodeNibbels[3]);
             uint8_t random = rand() & 0xFF;
             
-            cout << "Set: V[" << hex << (int)registerIndex << "]=" << hex << (int)V[registerIndex] << " to random()=" << hex << (int)random << " & " << hex << (int)constant << endl;
+            wprintw(window, "Set: V[0x%01x]=0x%02x = random()=0x%02x ^ 0x%02x\n", registerIndex, V[registerIndex], random, constant);
             
             V[registerIndex] = random & constant;
             break;
@@ -308,7 +318,7 @@ bool Chip8CPU::runCycle() {
             uint8_t secondRegisterIndex = opcodeNibbels[2];
             uint8_t nibble = opcodeNibbels[3];
             
-            cout << "Display: n=" << (int)nibble << " bytes from I=" << hex << (int)I << " at (V[" << hex << (int)firstRegisterIndex << "]=" << hex << (int)V[firstRegisterIndex] << ", V[" << hex << (int)secondRegisterIndex << "]=" << hex << (int)V[secondRegisterIndex] << ")" << endl;
+            wprintw(window, "Display: n=0x%01x bytes from I=0x%03x at (V[0x%01x]=0x%02x, V[0x%01x]=0x%02x)\n", nibble, I, firstRegisterIndex, V[firstRegisterIndex], secondRegisterIndex, V[secondRegisterIndex]);
             
             uint8_t* spritesPointer = &memory[I];
             uint8_t spritesByteCount = nibble;
@@ -325,7 +335,7 @@ bool Chip8CPU::runCycle() {
             uint8_t registerIndex = opcodeNibbels[1];
             switch(getValue(opcodeNibbels[2], opcodeNibbels[3])) {
                 case 0x9E: {
-                    cout << "Is key pressed with value: V[" << hex << (int)registerIndex << "]=" << hex << (int)V[registerIndex] << endl;
+                    wprintw(window, "Is key pressed with value V[0x%01x]=0x%02x\n", registerIndex, V[registerIndex]);
                     
                     if (keyboard->isKeyPressed() == true && keyboard->getKeyValue() == V[registerIndex]) {
                         increaseProgramCounter(programmCounter); // skip next command
@@ -333,7 +343,7 @@ bool Chip8CPU::runCycle() {
                     break;
                 }
                 case 0xA1: {
-                    cout << "Is key not pressed with value: V[" << hex << (int)registerIndex << "]=" << hex << (int)V[registerIndex] << endl;
+                    wprintw(window, "Is key not pressed with value V[0x%01x]=0x%02x\n", registerIndex, V[registerIndex]);
                     
                     if (keyboard->isKeyPressed() == false || keyboard->getKeyValue() != V[registerIndex]) {
                         increaseProgramCounter(programmCounter); // skip next command
@@ -341,7 +351,7 @@ bool Chip8CPU::runCycle() {
                     break;
                 }
                 default: {
-                    handleUnsupportedOpcode(opcode);
+                    handleUnsupportedOpcode(window, opcode);
                     unknownOpcode = true;
                     break;
                 }
@@ -352,51 +362,52 @@ bool Chip8CPU::runCycle() {
             uint8_t registerIndex = opcodeNibbels[1];
             switch(getValue(opcodeNibbels[2], opcodeNibbels[3])) {
                 case 0x07: {
-                    cout << "Set: V[" << hex << (int)registerIndex << "]=" << hex << (int)V[registerIndex] << " to DT=" << hex << (int)delayTimer << endl;
-            
+                    wprintw(window, "Set: V[0x%01x]=0x%02x = DT=0x%02x\n", registerIndex, V[registerIndex], delayTimer);
+                    
                     V[registerIndex] = delayTimer;
                     break;
                 }
                 case 0x0A: {
                     if (!keyboard->isKeyPressed()) {
-                        cout << "Waiting for key press" << endl;
+                        wprintw(window, "Waiting for key press\n");
+
                         programmCounter -= INCREASE; // rewind to this command
                         break;
                     }
                     uint8_t keyValue = keyboard->getKeyValue();
 
-                    cout << "Set: V[" << hex << (int)registerIndex << "]=" << hex << (int)V[registerIndex] << " to K=" << hex << (int)keyValue << endl;
-            
+                    wprintw(window, "Set: V[0x%01x]=0x%02x = K=0x%02x\n", registerIndex, V[registerIndex], keyValue);
+
                     V[registerIndex] = keyValue;
                     break;
                 }
                 case 0x15: {
-                    cout << "Set: DT to V[" << hex << (int)registerIndex << "]=" << hex << (int)V[registerIndex] << endl;
-            
+                    wprintw(window, "Set: DT=0x%02x = V[0x%01x]=0x%02x\n", delayTimer, registerIndex, V[registerIndex]);
+                    
                     delayTimer = V[registerIndex];
                     break;
                 }
                 case 0x18: {
-                    cout << "Set: ST to V[" << hex << (int)registerIndex << "]=" << hex << (int)V[registerIndex] << endl;
-            
+                    wprintw(window, "Set: ST=0x%02x = V[0x%01x]=0x%02x\n", soundTimer, registerIndex, V[registerIndex]);
+                    
                     soundTimer = V[registerIndex];
                     break;
                 }
                 case 0x1E: {
-                    cout << "Set: I to I=" << hex << (int)I << " + V[" << hex << (int)registerIndex << "]=" << hex << (int)V[registerIndex] << endl;
-            
+                    wprintw(window, "Add: I=0x%02x += V[0x%01x]=0x%02x\n", I, registerIndex, V[registerIndex]);
+                    
                     I += V[registerIndex];
                     break;
                 }
                 case 0x29: {
-                    cout << "Set: I to sprite address of digit V[" << hex << (int)registerIndex << "]=" << hex << (int)V[registerIndex] << endl;
-            
+                    wprintw(window, "Set: I=0x%02x = sprite address of digit V[0x%01x]=0x%02x\n", I, registerIndex, V[registerIndex]);
+                    
                     I = FONT_SPRITE_START_ADDRESS + (V[registerIndex] * FONT_SPRITE_LENGTH);
                     break;
                 }
                 case 0x33: {
-                    cout << "Set: I=" << hex << (int)I <<", I+1, I+2 to BCD representation of V[" << hex << (int)registerIndex << "]=" << hex << (int)V[registerIndex] << endl;
-            
+                    wprintw(window, "Set: memory[I=0x%02x, I+1, I+2] = BCD representation of V[0x%01x]=0x%02x\n", I, registerIndex, V[registerIndex]);
+                    
                     uint8_t ones = V[registerIndex] % 10;
                     uint8_t tens =  (V[registerIndex] / 10) % 10;
                     uint8_t hundreds = (V[registerIndex] / 100) % 10;
@@ -407,8 +418,8 @@ bool Chip8CPU::runCycle() {
                     break;
                 }
                 case 0x55: {
-                    cout << "Unload registers V[0]..V[" << hex << (int)registerIndex << "] to memory[I] and following" << endl;
-            
+                    wprintw(window, "Unload registers V[0x0]..V[0x%01F] to memory[I=0x%02x,..]\n", registerIndex, I);
+                    
                     for (uint8_t offset = 0; offset <= registerIndex; offset++) {
                         memory[I + offset] = V[offset];
                     }
@@ -416,15 +427,15 @@ bool Chip8CPU::runCycle() {
                 }
 
                 case 0x65: {
-                    cout << "Load registers V[0]..V[" << hex << (int)registerIndex << "] from memory[I] and following" << endl;
-            
+                    wprintw(window, "Load registers V[0x0]..V[0x%01F] from memory[I=0x%02x,..]\n", registerIndex, I);
+                    
                     for (uint8_t offset = 0; offset <= registerIndex; offset++) {
                         V[offset] = memory[I + offset];
                     }
                     break;
                 }
                 default: {
-                    handleUnsupportedOpcode(opcode);
+                    handleUnsupportedOpcode(window, opcode);
                     unknownOpcode = true;
                     break;
                 }
@@ -432,7 +443,7 @@ bool Chip8CPU::runCycle() {
             break;
         }
         default: {
-            handleUnsupportedOpcode(opcode);
+            handleUnsupportedOpcode(window, opcode);
             unknownOpcode = true;
             break;
         }
@@ -440,7 +451,7 @@ bool Chip8CPU::runCycle() {
     increaseProgramCounter(programmCounter);
 
     if (soundTimer > 0) {
-        cout << "\a";
+        beep();
     }
 
     decreaseTimer(delayTimer);
@@ -450,8 +461,8 @@ bool Chip8CPU::runCycle() {
     return !unknownOpcode;
 }
 
-void handleUnsupportedOpcode(uint16_t opcode) {
-    cout << "Unsupported Opcode: " << hex << (int)opcode << endl;
+void handleUnsupportedOpcode(WINDOW* window, uint16_t opcode) {
+    wprintw(window, "Unsupported Opcode: 0x%04x\n", opcode);
 }
 
 uint16_t extractAddressFromOpcode(uint16_t opcode) {

@@ -3,28 +3,41 @@
 
 using namespace std;
 
-Display::Display() {
+Display::Display(WINDOW* window) {
+    this->window = window;
+
     clean();
 }
 
 void Display::draw() {
-    for (int index = 0; index < DISPLAY_WIDTH + 2; index++) {
-        cout << "=";    
+    if (!dispayDidChange) {
+        return;
     }
-    cout << endl;
 
+    wclear(window); 
+    wmove(window, 0, 0);
+    wrefresh(window);
+
+    for (int index = 0; index < DISPLAY_WIDTH + 2; index++) {
+        waddch(window, '=');
+    }
+    waddch(window, '\n');
+    
     for (int rowIndex = 0; rowIndex < DISPLAY_HEIGHT; rowIndex++) {
-        cout << "=";
+        waddch(window, '=');
         for(int columnIndex = 0; columnIndex < DISPLAY_WIDTH; columnIndex++) {
             uint8_t pixelValue = display[rowIndex][columnIndex] & 0x1; // last bit is relevant only
-            cout << (pixelValue == 0x1 ? "*" : " ");
+            waddch(window, (pixelValue == 0x1 ? '*' : ' '));
         }
-        cout << "=" << endl;
+        waddch(window, '=');
+        waddch(window, '\n');
     }
     for (int index = 0; index < DISPLAY_WIDTH + 2; index++) {
-        cout << "=";    
+        waddch(window, '=');    
     }
-    cout << endl;
+    wechochar(window, '\n');
+
+    dispayDidChange = false;
 }
 
 void Display::clean() {
@@ -33,6 +46,10 @@ void Display::clean() {
             display[rowIndex][columnIndex] = 0x0;
         }   
     }
+    wclear(window); 
+    wmove(window, 1, 0);
+    wrefresh(window);
+    dispayDidChange = true;
 }
 
 bool getBitFromByte(uint8_t byte, uint8_t position) {
@@ -60,6 +77,7 @@ bool Display::drawSprite(uint8_t left, uint8_t top, uint8_t* spritesPointer, uin
     for (uint8_t offset = 0; offset < spritesByteCount; offset++) {
         collision |= drawSpriteByte(left, (top + offset) % DISPLAY_HEIGHT, *(spritesPointer + offset));
     }
+    dispayDidChange = true;
 
     return collision;
 }
