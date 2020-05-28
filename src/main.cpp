@@ -52,9 +52,9 @@ int main(int argc, char *argv[]) {
     noecho();
     cbreak();
 
-    WINDOW* displayWindow = newwin(DISPLAY_HEIGHT + 5, DISPLAY_WIDTH + 5, 1, 0);
-    WINDOW* keyboardWindow = newwin(5, 40, 1, DISPLAY_WIDTH +  10);
-    WINDOW* cpuWindow = newwin(DISPLAY_HEIGHT - 5, 80, 10, DISPLAY_WIDTH +  10);
+    WINDOW* displayWindow = newwin(DISPLAY_HEIGHT + 3, DISPLAY_WIDTH + 3, 0, 0);
+    WINDOW* keyboardWindow = newwin(5, 80, 0, DISPLAY_WIDTH +  10);
+    WINDOW* cpuWindow = newwin((DISPLAY_HEIGHT + 3 - 10), 80, 10, DISPLAY_WIDTH +  10);
     
     // keyboardWindow is the only window with inputs
     keypad(keyboardWindow, TRUE);
@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
         wechochar(cpuWindow, '\n');
         display->draw();
         keyboard->readKey();
-        sleep(delay); // ~60Hz
+        sleep(delay);
     } while (wasSuccessful);
     
     wprintw(cpuWindow, "Emulation ended. Press key to exit.");
