@@ -9,7 +9,7 @@
 #define FONT_SPRITE_START_ADDRESS 0x0000
 #define FONT_SPRITE_LENGTH 5
 #define FONT_SPRITE_BYTES 16 * FONT_SPRITE_LENGTH
-#define INCREASE 2
+#define INCREMENT 2
 
 #include <stack>
 #include "display.h"
@@ -35,6 +35,8 @@ private:
     Keyboard* keyboard;
 
     void init();
+
+    bool decodeOpcode(uint16_t opcode);
 public:
     Chip8CPU(WINDOW* window, Display* display, Keyboard* keyboard);
     ~Chip8CPU();
@@ -46,7 +48,7 @@ public:
 void handleUnsupportedOpcode(WINDOW* window, uint16_t opcode);
 uint16_t extractAddressFromOpcode(uint16_t opcode); // takes 0x0FFF
 uint8_t getValue(uint8_t highNibble, uint8_t lowNibble);;
-void increaseProgramCounter(uint16_t& programCounter);
-void decreaseTimer(uint8_t& timer);
+void incrementProgramCounter(uint16_t& programCounter);
+void decrementTimer(uint8_t& timer);
 
 #endif

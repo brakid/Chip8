@@ -65,10 +65,26 @@ void Chip8CPU::loadMemory(uint8_t* memoryData, uint16_t memoryDataLength) {
 }
 
 bool Chip8CPU::runCycle() {
+    // load opcode & increase program counter
     uint16_t opcode = memory[programmCounter] << 8 | memory[programmCounter+1];
-
     wprintw(window, "Program Counter: 0x%04x, Opcode: 0x%04x\n", programmCounter, opcode);
-    
+    incrementProgramCounter(programmCounter);
+
+    // process loaded opcode
+    bool success = decodeOpcode(opcode);
+
+    // chnge timers
+    if (soundTimer > 0) {
+        beep();
+    }
+
+    decrementTimer(delayTimer);
+    decrementTimer(soundTimer);
+
+    return success;
+}
+
+bool Chip8CPU::decodeOpcode(uint16_t opcode) {
     bool unknownOpcode = false;
     
     uint8_t opcodeNibbels[4];
@@ -112,7 +128,7 @@ bool Chip8CPU::runCycle() {
 
                     wprintw(window, "Calling program at: 0x%04x, return address: 0x%04x\n", callAddress, returnAddress);
                     
-                    programmCounter = callAddress - INCREASE;
+                    programmCounter = callAddress;
                     break;
                 }
             }
@@ -123,7 +139,7 @@ bool Chip8CPU::runCycle() {
             
             wprintw(window, "Jump to: 0x%04x\n", jumpAddress);
             
-            programmCounter = jumpAddress - INCREASE; // as the counter is increased after each cycle
+            programmCounter = jumpAddress;
             break;
         }
         case 0x2: {
@@ -133,7 +149,7 @@ bool Chip8CPU::runCycle() {
             
             wprintw(window, "Calling subroutine at: 0x%04x, return address: 0x%04x\n", subroutineAddress, returnAddress);
             
-            programmCounter = subroutineAddress - INCREASE; // as the counter is increased after each cycle
+            programmCounter = subroutineAddress;
             break;
         }
         case 0x3: {
@@ -143,7 +159,7 @@ bool Chip8CPU::runCycle() {
             wprintw(window, "Comparing: V[0x%01x]=0x%02x == 0x%02x\n", registerIndex, V[registerIndex], constant);
             
             if (V[registerIndex] == constant) {
-                increaseProgramCounter(programmCounter); // skip next command
+                incrementProgramCounter(programmCounter); // skip next command
             }
             break;
         }
@@ -154,7 +170,7 @@ bool Chip8CPU::runCycle() {
             wprintw(window, "Comparing: V[0x%01x]=0x%02x != 0x%02x\n", registerIndex, V[registerIndex], constant);
             
             if (V[registerIndex] != constant) {
-                increaseProgramCounter(programmCounter); // skip next command
+                incrementProgramCounter(programmCounter); // skip next command
             }
             break;
         }
@@ -165,7 +181,7 @@ bool Chip8CPU::runCycle() {
             wprintw(window, "Comparing: V[0x%01x]=0x%02x == V[0x%01x]=0x%02x\n", firstRegisterIndex, V[firstRegisterIndex], secondRegisterIndex, V[secondRegisterIndex]);
             
             if (V[firstRegisterIndex] == V[secondRegisterIndex]) {
-                increaseProgramCounter(programmCounter); // skip next command
+                incrementProgramCounter(programmCounter); // skip next command
             }
             break;
         }
@@ -282,7 +298,7 @@ bool Chip8CPU::runCycle() {
             wprintw(window, "Comparing: V[0x%01x]=0x%02x != V[0x%01x]=0x%02x\n", firstRegisterIndex, V[firstRegisterIndex], secondRegisterIndex, V[secondRegisterIndex]);
             
             if (V[firstRegisterIndex] != V[secondRegisterIndex]) {
-                increaseProgramCounter(programmCounter); // skip next command
+                incrementProgramCounter(programmCounter); // skip next command
             }
             break;
         }
@@ -299,7 +315,7 @@ bool Chip8CPU::runCycle() {
             
             wprintw(window, "Jump to: V[0]=0x%02x + 0x%04x\n", V[0], jumpAddress);
             
-            programmCounter = V[0] + jumpAddress - INCREASE; // as the counter is increased after each cycle
+            programmCounter = V[0] + jumpAddress; // as the counter is increased after each cycle
             break;
         }
         case 0xC: {
@@ -336,7 +352,7 @@ bool Chip8CPU::runCycle() {
                     wprintw(window, "Is key pressed with value V[0x%01x]=0x%02x\n", registerIndex, V[registerIndex]);
                     
                     if (keyboard->isKeyPressed() == true && keyboard->getKeyValue() == V[registerIndex]) {
-                        increaseProgramCounter(programmCounter); // skip next command
+                        incrementProgramCounter(programmCounter); // skip next command
                     }
                     break;
                 }
@@ -344,7 +360,7 @@ bool Chip8CPU::runCycle() {
                     wprintw(window, "Is key not pressed with value V[0x%01x]=0x%02x\n", registerIndex, V[registerIndex]);
                     
                     if (keyboard->isKeyPressed() == false || keyboard->getKeyValue() != V[registerIndex]) {
-                        increaseProgramCounter(programmCounter); // skip next command
+                        incrementProgramCounter(programmCounter); // skip next command
                     }
                     break;
                 }
@@ -369,7 +385,7 @@ bool Chip8CPU::runCycle() {
                     if (!keyboard->isKeyPressed()) {
                         wprintw(window, "Waiting for key press\n");
 
-                        programmCounter -= INCREASE; // rewind to this command
+                        programmCounter -= INCREMENT; // rewind to this command
                         break;
                     }
                     uint8_t keyValue = keyboard->getKeyValue();
@@ -448,14 +464,6 @@ bool Chip8CPU::runCycle() {
             break;
         }
     }
-    increaseProgramCounter(programmCounter);
-
-    if (soundTimer > 0) {
-        beep();
-    }
-
-    decreaseTimer(delayTimer);
-    decreaseTimer(soundTimer);
 
     return !unknownOpcode;
 }
@@ -472,11 +480,11 @@ uint8_t getValue(uint8_t highNibble, uint8_t lowNibble) {
     return (highNibble & 0x0F) << 4 | (lowNibble & 0x0F);
 }
 
-void increaseProgramCounter(uint16_t& programCounter) {
-    programCounter = programCounter + INCREASE;
+void incrementProgramCounter(uint16_t& programCounter) {
+    programCounter += INCREMENT;
 }
 
-void decreaseTimer(uint8_t& timer) {
+void decrementTimer(uint8_t& timer) {
     if (timer > 0) {
         timer--;
     }
