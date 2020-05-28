@@ -90,8 +90,9 @@ bool Chip8CPU::runCycle() {
                         }
                         case 0xE: {
                             uint16_t returnAddress = stack->top();
+                            stack->pop();
                             
-                            wprintw(window, "Return back to: 0x%03x\n", returnAddress);
+                            wprintw(window, "Return back to: 0x%04x\n", returnAddress);
                             
                             programmCounter = returnAddress;
                             break;
@@ -105,17 +106,14 @@ bool Chip8CPU::runCycle() {
                     break;
                 }
                 default: { // opcode is 0x0NNN
-                    handleUnsupportedOpcode(window, opcode);
-                    unknownOpcode = true;
-                    break;
-                    /*
                     uint16_t returnAddress = programmCounter;
                     stack->push(returnAddress);
                     uint16_t callAddress = extractAddressFromOpcode(opcode);
-                    //cout << "Calling program at: " << hex << (int)callAddress << ", return address: " << hex << (int)returnAddress << endl;
+
+                    wprintw(window, "Calling program at: 0x%04x, return address: 0x%04x\n", callAddress, returnAddress);
+                    
                     programmCounter = callAddress - INCREASE;
                     break;
-                    */
                 }
             }
             break;
@@ -123,7 +121,7 @@ bool Chip8CPU::runCycle() {
         case 0x1: {
             uint16_t jumpAddress = extractAddressFromOpcode(opcode);
             
-            wprintw(window, "Jump to: 0x%03x\n", jumpAddress);
+            wprintw(window, "Jump to: 0x%04x\n", jumpAddress);
             
             programmCounter = jumpAddress - INCREASE; // as the counter is increased after each cycle
             break;
@@ -185,7 +183,7 @@ bool Chip8CPU::runCycle() {
             uint8_t registerIndex = opcodeNibbels[1];
             uint8_t constant = getValue(opcodeNibbels[2], opcodeNibbels[3]);
             
-            wprintw(window, "Add: V[0x%01x]=0x%02x = 0x%02x\n", registerIndex, V[registerIndex], constant);
+            wprintw(window, "Add: V[0x%01x]=0x%02x += 0x%02x\n", registerIndex, V[registerIndex], constant);
             
             V[registerIndex]+= constant;
             
@@ -224,7 +222,7 @@ bool Chip8CPU::runCycle() {
                     wprintw(window, "Add: V[0x%01x]=0x%02x += V[0x%01x]=0x%02x\n", firstRegisterIndex, V[firstRegisterIndex], secondRegisterIndex, V[secondRegisterIndex]);
                     
                     uint16_t fullResult = V[firstRegisterIndex] + V[secondRegisterIndex];
-                    uint8_t carryOverFlag = (fullResult & 0x0100) >> 8;
+                    uint8_t carryOverFlag = (fullResult > 255) ? 0x01 : 0x00;
                     uint8_t result = (fullResult & 0x00FF);
                     
                     V[firstRegisterIndex] = result;
@@ -234,7 +232,7 @@ bool Chip8CPU::runCycle() {
                 case 0x5: {
                     wprintw(window, "Subtract: V[0x%01x]=0x%02x -= V[0x%01x]=0x%02x\n", firstRegisterIndex, V[firstRegisterIndex], secondRegisterIndex, V[secondRegisterIndex]);
                     
-                    uint8_t carryOverFlag = (V[firstRegisterIndex] > V[secondRegisterIndex]) ? 0x1 : 0x0;
+                    uint8_t carryOverFlag = (V[firstRegisterIndex] > V[secondRegisterIndex]) ? 0x01 : 0x00;
                     uint8_t result = V[firstRegisterIndex] - V[secondRegisterIndex];
                     
                     V[firstRegisterIndex] = result;
@@ -253,7 +251,7 @@ bool Chip8CPU::runCycle() {
                 case 0x7: {
                     wprintw(window, "Subtract: V[0x%01x] = V[0x%01x]=0x%02x - V[0x%01x]=0x%02x\n", firstRegisterIndex, secondRegisterIndex, V[secondRegisterIndex], firstRegisterIndex, V[firstRegisterIndex]);
                     
-                    uint8_t carryOverFlag = (V[secondRegisterIndex] > V[firstRegisterIndex]) ? 0x1 : 0x0;
+                    uint8_t carryOverFlag = (V[secondRegisterIndex] > V[firstRegisterIndex]) ? 0x01 : 0x00;
                     uint8_t result = V[secondRegisterIndex] - V[firstRegisterIndex];
                     
                     V[firstRegisterIndex] = result;
@@ -263,7 +261,8 @@ bool Chip8CPU::runCycle() {
                 case 0xE: {
                     wprintw(window, "Shift: V[0x%01x]=0x%02x << 1\n", firstRegisterIndex, V[firstRegisterIndex]);
                     
-                    uint8_t carryOverFlag = V[firstRegisterIndex] & 0x80;
+                    uint8_t carryOverFlag = (V[firstRegisterIndex] >= 0x80) ? 0x01 : 0x00;
+                    
                     V[firstRegisterIndex] <<= 1;
                     V[F] = carryOverFlag;
                     break;
@@ -290,7 +289,7 @@ bool Chip8CPU::runCycle() {
         case 0xA: {
             uint16_t address = extractAddressFromOpcode(opcode);
             
-            wprintw(window, "Set: I=0x%03x to 0x%03x\n", I, address);
+            wprintw(window, "Set: I=0x%04x to 0x%04x\n", I, address);
             
             I = address;
             break;
@@ -298,7 +297,7 @@ bool Chip8CPU::runCycle() {
         case 0xB: {
             uint16_t jumpAddress = extractAddressFromOpcode(opcode);
             
-            wprintw(window, "Jump to: V[0]=0x%02x + 0x%03x\n", V[0], jumpAddress);
+            wprintw(window, "Jump to: V[0]=0x%02x + 0x%04x\n", V[0], jumpAddress);
             
             programmCounter = V[0] + jumpAddress - INCREASE; // as the counter is increased after each cycle
             break;
@@ -308,7 +307,7 @@ bool Chip8CPU::runCycle() {
             uint8_t constant = getValue(opcodeNibbels[2], opcodeNibbels[3]);
             uint8_t random = rand() & 0xFF;
             
-            wprintw(window, "Set: V[0x%01x]=0x%02x = random()=0x%02x ^ 0x%02x\n", registerIndex, V[registerIndex], random, constant);
+            wprintw(window, "Set: V[0x%01x]=0x%02x = random()=0x%02x & 0x%02x\n", registerIndex, V[registerIndex], random, constant);
             
             V[registerIndex] = random & constant;
             break;
@@ -318,7 +317,7 @@ bool Chip8CPU::runCycle() {
             uint8_t secondRegisterIndex = opcodeNibbels[2];
             uint8_t nibble = opcodeNibbels[3];
             
-            wprintw(window, "Display: n=0x%01x bytes from I=0x%03x at (V[0x%01x]=0x%02x, V[0x%01x]=0x%02x)\n", nibble, I, firstRegisterIndex, V[firstRegisterIndex], secondRegisterIndex, V[secondRegisterIndex]);
+            wprintw(window, "Display: n=0x%01x bytes from I=0x%04x at (V[0x%01x]=0x%02x, V[0x%01x]=0x%02x)\n", nibble, I, firstRegisterIndex, V[firstRegisterIndex], secondRegisterIndex, V[secondRegisterIndex]);
             
             uint8_t* spritesPointer = &memory[I];
             uint8_t spritesByteCount = nibble;
@@ -327,8 +326,7 @@ bool Chip8CPU::runCycle() {
             
             bool hasCollision = display->drawSprite(left, top, spritesPointer, spritesByteCount);
 
-            V[F] = hasCollision;
-
+            V[F] = hasCollision ? 0x01 : 0x00;
             break;
         }
         case 0xE: {
@@ -397,6 +395,8 @@ bool Chip8CPU::runCycle() {
                     wprintw(window, "Add: I=0x%02x += V[0x%01x]=0x%02x\n", I, registerIndex, V[registerIndex]);
                     
                     I += V[registerIndex];
+                    uint8_t carryOverFlag = (I > 255) ? 0x01 : 0x00;
+                    V[F] = carryOverFlag;
                     break;
                 }
                 case 0x29: {
@@ -406,7 +406,7 @@ bool Chip8CPU::runCycle() {
                     break;
                 }
                 case 0x33: {
-                    wprintw(window, "Set: memory[I=0x%02x, I+1, I+2] = BCD representation of V[0x%01x]=0x%02x\n", I, registerIndex, V[registerIndex]);
+                    wprintw(window, "Set: memory[I=0x%04x, I+1, I+2] = BCD representation of V[0x%01x]=0x%02x\n", I, registerIndex, V[registerIndex]);
                     
                     uint8_t ones = V[registerIndex] % 10;
                     uint8_t tens =  (V[registerIndex] / 10) % 10;
@@ -418,7 +418,7 @@ bool Chip8CPU::runCycle() {
                     break;
                 }
                 case 0x55: {
-                    wprintw(window, "Unload registers V[0x0]..V[0x%01F] to memory[I=0x%02x,..]\n", registerIndex, I);
+                    wprintw(window, "Unload registers V[0x0]..V[0x%01x] to memory[I=0x%04x,..]\n", registerIndex, I);
                     
                     for (uint8_t offset = 0; offset <= registerIndex; offset++) {
                         memory[I + offset] = V[offset];
@@ -427,7 +427,7 @@ bool Chip8CPU::runCycle() {
                 }
 
                 case 0x65: {
-                    wprintw(window, "Load registers V[0x0]..V[0x%01F] from memory[I=0x%02x,..]\n", registerIndex, I);
+                    wprintw(window, "Load registers V[0x0]..V[0x%01x] from memory[I=0x%04x,..]\n", registerIndex, I);
                     
                     for (uint8_t offset = 0; offset <= registerIndex; offset++) {
                         V[offset] = memory[I + offset];
@@ -456,7 +456,6 @@ bool Chip8CPU::runCycle() {
 
     decreaseTimer(delayTimer);
     decreaseTimer(soundTimer);
-
 
     return !unknownOpcode;
 }
