@@ -3,7 +3,7 @@
     LD V1, 0x00 ; set V1 to 0x0
     LD V2, 0x00 ; set V2 to 0x0
     LD V3, 0x00 ; set V3 to 0x0
-:loop
+loop:
     LD F, V0 ; set I to point to digit VO (value)
     DRW V1, V2, 0x5 ; draw sprite
     ADD V0, 0x01 ; increase V0 by 1

@@ -1,7 +1,7 @@
 import re
 
 def is_label(line):
-    return line.startswith(':')
+    return line.strip().endswith(':')
 
 def is_byte(line):
     return '.byte' in line
@@ -18,7 +18,7 @@ def count_commands(label, classified_lines):
             return counter
         
 def get_label(value):
-    return value[1:].strip()
+    return value[:-1].strip()
 
 def get_command(value):
     return value.strip()

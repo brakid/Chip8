@@ -1,4 +1,4 @@
-:start
+start:
     CLS
     LD V0, 0x00
     LD V1, 0x01
@@ -38,18 +38,18 @@
     LD VE, K ; expected = E
     LD VF, K ; expected = F
     CALL printing
-:end
+end:
     LD V0, K
     JP end
 
-:function
+function:
     LD I, 0x050
     LD V0, 0x01
     LD V1, 0x00 ; x coordinate
     LD V2, 0x00 ; y coordinate
     LD V3, 0x10 ; 16 repetitions
     LD V4, 0x00 ; loop variable
-:loop
+loop:
     DRW V1, V2, 0x1 ; draw sprite
     ADD V2, 0x01
     ADD I, V0 ; increase memory pointer by 1
@@ -58,7 +58,7 @@
     JP loop
     RET
 
-:printing
+printing:
     LD V0, 0x90 ; 144
     LD I, 0x000
     LD B, V0

@@ -1,10 +1,10 @@
-:start
+start:
     CLS
     LD V0, 0x0A ; set V0 to 0xA
     LD V1, 0x00 ; set V1 to 0x0
     LD V2, 0x00 ; set V2 to 0x0
     LD V3, 0x00 ; set V3 to 0x0
-:loop
+loop:
     LD V0, K ; wait for key press
     LD F, V0 ; set I to point to digit VO (value)
     DRW V1, V2, 0x5 ; draw sprite
@@ -25,11 +25,11 @@
     LD ST, V0
     LD VF, K ; wait for key press
     JP start
-:heart_data_1
+heart_data_1:
     .byte 0x24
     .byte 0x5a
     .byte 0x81
     .byte 0x42
     .byte 0x24
-:heart_data_2
+heart_data_2:
     .byte 0x18
